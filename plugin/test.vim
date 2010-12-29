@@ -6,18 +6,21 @@ let s:sid_script = "map <SID>xx <SID>xx\n" .
          \ "let s:SNR = '<SNR>' . s:SID"
 exec s:sid_script
 
-function s:T_Python(menu)
-   exec "80menu " . a:menu . ".FT\\ Menu\\ Test :echom 'Python menu works'<cr>"
+function s:T_Python(priority, menu)
+   exec a:priority . "amenu " . a:menu . ".FT\\ Menu\\ Test :echom 'Python menu works'<cr>"
 endfunc
 
-function s:T_Vim(menu)
-   exec "80menu " . a:menu . ".FT\\ Menu\\ Test :echom 'Vim menu works'<cr>"
+function s:T_Vim(priority, menu)
+   exec a:priority . "amenu " . a:menu . ".FT\\ Menu\\ Test :echom 'Vim menu works'<cr>"
+   exec a:priority . "amenu " . a:menu . ".&Source :so %<cr>"
 endfunc
 
 function s:Test()
    " This part is done by the plugins
-   call AddFtMenuHook('python', s:SNR . "T_Python")
-   call AddFtMenuHook('vim', s:SNR . "T_Vim")
+   call ftmenu#RegisterHook("T_Python", s:SNR . "T_Python")
+   call ftmenu#AddHook('python', "T_Python")
+   call ftmenu#RegisterHook("T_Vim", s:SNR . "T_Vim")
+   call ftmenu#AddHook('vim', "T_Vim")
 
    " Workaronds are provided by the user in vimrc. Unforutnately
    " AddFtWorkaround is not available in vimrc, so a global variable will have
@@ -25,18 +28,47 @@ function s:Test()
    "    let g:ftmenu_workaround = { 
    "         \ 'python': ['Python', 'IM-Python=>&Buffer'],
    "    ...  \ }
-   call AddFtWorkaround('python', ['Python', 'IM-Python=>&Buffer'])
-   call AddFtWorkaround('sh', ['Bash'])
-   call AddFtWorkaround('perl', ['Perl'])
-   call AddFtWorkaround('lua', ['Lua'])
-   call AddFtWorkaround('html', ['HTML', 'XHtml'])
-   " django-templates : replace <a0> with \<space> in code
-   call AddFtWorkaround('htmldjango', ['HTML', 'XHtml', 'Django templates=>&Django'])
-   call AddFtWorkaround('xhtml', ['XHtml'])
+   call ftmenu#AddWorkaround('python', ['Python', 'IM-Python=>&Buffer'])
+   call ftmenu#AddWorkaround('sh', ['Bash'])
+   call ftmenu#AddWorkaround('perl', ['Perl'])
+   call ftmenu#AddWorkaround('lua', ['Lua'])
+
+   " HTML wants to disable menu items when switching buffers
+   "    => some code removed from HTML.vim#MenuControl()
+   call ftmenu#AddWorkaround('html', ['HTML', 'XHtml=>XHtml'])
+
+   " django-templates: encoding problem; replace <a0> with \<space> in code
+   call ftmenu#AddWorkaround('htmldjango', ['XHtml', 'HTML=>Html', 'Django templates=>&Django'])
+   call ftmenu#AddWorkaround('xhtml', ['XHtml', 'HTML=>Html'])
 
    " 'Global' functions should not be in the mode menu, but for testing it's ok
-   call AddFtWorkaround('viki', ['Plugin.Viki'])
+   call ftmenu#AddWorkaround('viki', ['Plugin.Viki'])
+
+   " Timing: gvim --startuptime out
+   "
+   " Plugins bash-support and perl-support create _huge_ menus. Plugin
+   " filetype-menu captures and deletes registered menus in VimEnter.
+   "
+   " bash-support: 56ms      3.5%
+   " perl-support: 87ms      5.4%
+   " Starting GUI: 552ms    34.7%
+   " VimEnter: 660ms        41.5%
+   " VIM Started: 1590ms
 endfunc
 
+function s:MakeTestMenu()
+   menu   Test.Menu  :
+   amenu  Test.AMenu  :
+   noremenu Test.NoReMenu :
+   anoremenu Test.ANoReMenu :
+
+   menu    Test.Mix-Menu-VMenu :
+   vmenu   Test.Mix-Menu-VMenu :
+
+   noremenu Test.Mix-NoReMenu-VMenu :
+   vmenu    Test.Mix-NoReMenu-VMenu :
+endfunc
+
+call s:MakeTestMenu()
 call s:Test()
 

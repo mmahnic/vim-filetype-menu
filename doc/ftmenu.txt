@@ -1,0 +1,114 @@
+*ftmenu.txt*                 FileType Menu                     December 2010
+
+filetype Menu                        *filetype-menu* *filetypemenu* *ftmenu*
+
+FileType Menu plugin implements a menu that changes its contents based on the 
+'filetype' of the current buffer. The menu is rebuilt every time the filetype 
+of the active buffer changes or when a buffer with a different filetype is 
+made active. The name of the menu is composed of the word "Mode" and of the 
+current filetype (eg. "&Mode-vim"). If there are no menus defined for the 
+current filetype, the FileType menu doesn't exist.
+
+Ideally the plugins that offer menus for a certain filetype register a 
+function (a hook) for each filetype menu. The ftmenu plugin calls these hooks 
+when the menus have to be recreated.
+
+Filetype menus that are created as normal menus by plugins that don't support 
+the ftmenu plugin can also be managed by ftmenu if they are registered at 
+startup. In this case ftmenu will save a normal menu in an internal structure 
+and delete it. When ftmenu recreates the FileType menu it will execute |menu| 
+commands that will recreate the normal menu under the FileType menu.
+
+  1. Using FileType menu hooks                      |ftmenu-hooks|
+  2. A workaround for existing filetype menus       |ftmenu-workaround|
+  2.1 Problems with workarounds                     |ftmenu-workaround-prblm|
+
+1. Using FileType menu hooks                                   *ftmenu-hooks*
+============================
+
+This method should be used by plugin writers that want to suport the FileType 
+menu. Here is an example of a hypothetic Vim FileType menu:
+>
+  " Get this script's number.
+  " (This block is taken from VxLib; equiv.: exec vxlib#plugin#MakeSID())
+	let s:sid_script = "map <SID>xx <SID>xx\n" .
+      \ "let s:SID = substitute(maparg('<SID>xx')," .
+      \      '<SNR>\\(\\d\\+_\\)xx$', '\\1', '') \n" .
+      \ "unmap <SID>xx\n" .
+      \ "let s:SNR = '<SNR>' . s:SID"
+	exec s:sid_script
+
+  function s:FTM_Vim(priority, menu)
+    exec a:priority . "amenu " . a:menu . ".&Source :so %<cr>"
+    exec a:priority . "amenu " . a:menu . ".&Test :echom 'It works'<cr>"
+  endfunc
+
+	call ftmenu#RegisterHook('VimTestMenu', s:SNR . 'FTM_Vim')
+	call ftmenu#AddHook('vim', 'VimTestMenu')
+<
+A filetype can have multiple hooks associated with it.
+
+
+2. A workaround for existing filetype menus               *ftmenu-workaround*
+===========================================
+
+Normal menus that should be managed by the ftmenu plugin are registered in the 
+Vim startup file |.vimrc|. The global variable g:ftmenu_mode_menus is a 
+dictionary that defines a list of normal menus that should be removed and 
+attached to the FileType menu. In this example one menu is registered for 
+filetype=sh and two for filetype=python:
+>
+  let g:ftmenu_mode_menus = {
+     \ 'sh': ['Bash'],
+     \ 'python': ['Python', 'IM-Python']
+     \ }
+<
+The ftmenu plugin can move a menu at any depth to the FileType menu (eg. 
+'Plugin.comment'). The same menu can be added to multiple filetypes.
+
+If there are many menus associated with a mode, they can be organized into 
+submenus in the FileType menu. For example the menu "IM-Python" from 
+vimscript#30 holds the structures of the current Python buffer. With the above 
+registrations the entries from menus "Python" and "IM-Python" are stored as 
+normal items in the "Mode-python" menu:
+>
+   Beginning of block
+   End of block
+   ...
+   functions
+   classes
+   ...
+<
+Instead the items of "IM-python" can be put in a submenu. This is done by 
+appending "=>Submenu-Name" to the name of the original menu. If the above 
+registration is changed to
+>
+  let g:ftmenu_mode_menus = {
+     \ 'sh': ['Bash'],
+     \ 'python': ['Python', 'IM-Python=>&Buffer']
+     \ }
+<
+the FileType menu will have a submenu called "Buffer" with items "functions" 
+and "classes":
+>
+   Beginning of block
+   End of block
+   ...
+   Buffer               >     functions
+                              classes
+   ...
+<
+
+2.1 Problems with workarounds                     *ftmenu-workaround-prblm*
+=============================
+
+When a menu is moved to a new location, the original plugin may have trouble 
+to update it. For example the 'IM-Python' menu above is recreated upon user 
+request. The plugin complains that the menu doesn't exist and creates a new 
+menu instead. To transfer the changes to the FileType menu, currently we have 
+to move to a buffer with a different filetype and back.
+
+If the command associated with a menu contains bars (|), it may not work in 
+the recreated menus
+
+vim:ft=help:tw=78:et:ts=2:norl:
