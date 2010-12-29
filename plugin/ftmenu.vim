@@ -252,34 +252,3 @@ augroup FtMenu
    au VimEnter * call <SID>StartupStuff()
 augroup END
 
-" From vxlib/plugin.vim
-let s:sid_script = "map <SID>xx <SID>xx\n" .
-         \ "let s:SID = substitute(maparg('<SID>xx'), '<SNR>\\(\\d\\+_\\)xx$', '\\1', '') \n" .
-         \ "unmap <SID>xx\n" .
-         \ "let s:SNR = '<SNR>' . s:SID"
-exec s:sid_script
-
-function s:T_Python(menu)
-   exec "80menu " . a:menu . ".FT\\ Menu\\ Test :echom 'Python menu works'<cr>"
-endfunc
-
-function s:T_Vim(menu)
-   exec "80menu " . a:menu . ".FT\\ Menu\\ Test :echom 'Vim menu works'<cr>"
-endfunc
-
-function s:Test()
-   call AddFtMenuHook('python', s:SNR . "T_Python")
-   call AddFtMenuHook('vim', s:SNR . "T_Vim")
-   call AddFtWorkaround('python', ['Python', 'IM-Python=>&Buffer'])
-   call AddFtWorkaround('sh', ['Bash'])
-   call AddFtWorkaround('perl', ['Perl'])
-   call AddFtWorkaround('lua', ['Lua'])
-   call AddFtWorkaround('html', ['HTML', 'XHtml'])
-   " django-templates : replace <a0> with \<space> in code
-   call AddFtWorkaround('htmldjango', ['HTML', 'XHtml', 'Django templates=>&Django'])
-   call AddFtWorkaround('xhtml', ['XHtml'])
-   call AddFtWorkaround('viki', ['Plugin.Viki'])
-endfunc
-
-call s:Test()
-
