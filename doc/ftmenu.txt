@@ -22,6 +22,7 @@ commands that will recreate the normal menu under the FileType menu.
   1. Using FileType menu hooks                      |ftmenu-hooks|
   2. A workaround for existing filetype menus       |ftmenu-workaround|
   2.1 Problems with workarounds                     |ftmenu-workaround-prblm|
+  3. Moving menus around                            |ftmenu-moving-menus|
 
 1. Using FileType menu hooks                                   *ftmenu-hooks*
 ============================
@@ -43,10 +44,17 @@ menu. Here is an example of a hypothetic Vim FileType menu:
     exec a:priority . "amenu " . a:menu . ".&Test :echom 'It works'<cr>"
   endfunc
 
-	call ftmenu#RegisterHook('VimTestMenu', s:SNR . 'FTM_Vim')
-	call ftmenu#AddHook('vim', 'VimTestMenu')
+  call ftmenu#RegisterHook('VimTestMenu', s:SNR . 'FTM_Vim')
+  call ftmenu#AddHook('vim', 'VimTestMenu')
 <
-A filetype can have multiple hooks associated with it.
+The function that will create the menu is first registered with a unique name. 
+This name is then used to associate the hook with a filetype.
+
+Note: A two step process is used so that in a future version the user will be 
+able to associate existing hooks with additional filetypes that were not 
+foreseen by the plugin author. It will also be possible to put items generated 
+by a hook into a separate submenu. All this would be hard to achieve if only 
+function references were used.
 
 
 2. A workaround for existing filetype menus               *ftmenu-workaround*
@@ -110,5 +118,63 @@ to move to a buffer with a different filetype and back.
 
 If the command associated with a menu contains bars (|), it may not work in 
 the recreated menus
+
+
+3. Moving menus around                                *ftmenu-moving-menus*
+======================
+
+The ftmenu plugin exposes a few functions that enable the user to move a menu 
+to a different location in the menu structure. This can be useful when many 
+plugins are installed that create their own top-level menus which can make the 
+menubar too large.
+
+When moving menus the considerations from |ftmenu-workaround-prblm| apply.
+
+ftmenu#MoveMenu(source, destination)                      *ftmenu-movemenu*
+
+The function captures the menu from source menu path, deletes it and recreates 
+its items in the destination menu path. The following call will move 
+"Tools.Spelling" to the menu "Test" and the items will be created in the 
+submenu "NewSpelling":
+>
+   call ftmenu#MoveMenu('Tools.Spelling', '&Test.New&Spelling')
+<
+In the process MoveMenu calls the functions CaptureMenu and CreateMenu.
+
+ftmenu#CaptureMenu(source, existingEntries)            *ftmenu-capturemenu*
+
+The function captures the menu from source menu path and returns a list of 
+menu entries that can be used to regenerate a menu. The parameter 
+existingEntries holds the entries from a previous call to CaptureMenu. This 
+can be used if we want to update the entries of a previously captured menu 
+(Note: the function doesn't detect if an item was deleted from the menu). This 
+parameter should mostly be an empty list ( [] ), but is used internally by 
+|ftmenu-workaround|.
+
+Every entry in the returned list is a dictionary with the following fields:
+    pri    a list of menu priorities
+    cmd    a |menu| command to generate an entry
+    menu   a list of menu parts
+           menu[0]=source
+           the rest is split(menupath,'.'), with source removed from menupath
+    rhs    the command that is associated with the menu
+           the bar (|) is escaped in rhs, but may still cause problems
+    id     a unique id of the menu entry used with existingEntries
+
+ftmenu#CreateMenu(destination, entries)
+
+The function will create a menu item for each entry in entries with the 
+following menu path:
+>
+    menupath = destination . '.' . join([1:], '.')
+<
+This means that the source from the CaptureMenu call will not be part of the 
+new menu.
+
+With CaptureMenu and CreateMenu it is possible to create a copy of a menu:
+>
+   let entries = ftmenu#CaptureMenu('Tools.Folding', [])
+   call ftmenu#CreateMenu('&Test.Copy&Folding', entries)
+<
 
 vim:ft=help:tw=78:et:ts=2:norl:

@@ -59,6 +59,12 @@ function s:TestWorkarounds()
 endfunc
 
 function s:TestMoveMenu()
+   call ftmenu#MoveMenu('Tools.Spelling', '&Test.Move&Spelling')
+
+   let entries = ftmenu#CaptureMenu('Tools.Folding', [])
+   call ftmenu#CreateMenu('&Test.Copy&Folding', entries)
+
+   " Real example
    call ftmenu#MoveMenu('DrChip.AlignMaps', 'Plugin.DrChip-&Align')
 endfunc
 
