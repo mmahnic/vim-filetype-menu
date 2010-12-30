@@ -15,13 +15,15 @@ function s:T_Vim(priority, menu)
    exec a:priority . "amenu " . a:menu . ".&Source :so %<cr>"
 endfunc
 
-function s:Test()
+function s:TestHooks()
    " This part is done by the plugins
    call ftmenu#RegisterHook("T_Python", s:SNR . "T_Python")
    call ftmenu#AddHook('python', "T_Python")
    call ftmenu#RegisterHook("T_Vim", s:SNR . "T_Vim")
    call ftmenu#AddHook('vim', "T_Vim")
+endfunc
 
+function s:TestWorkarounds()
    " Workaronds are provided by the user in vimrc. Unforutnately
    " AddFtWorkaround is not available in vimrc, so a global variable will have
    " to be used for that:
@@ -56,6 +58,10 @@ function s:Test()
    " VIM Started: 1590ms
 endfunc
 
+function s:TestMoveMenu()
+   call ftmenu#MoveMenu('DrChip.AlignMaps', 'Plugin.DrChip-&Align')
+endfunc
+
 function s:MakeTestMenu()
    menu   Test.Menu  :
    amenu  Test.AMenu  :
@@ -69,6 +75,12 @@ function s:MakeTestMenu()
    vmenu    Test.Mix-NoReMenu-VMenu :
 endfunc
 
-call s:MakeTestMenu()
+function! s:Test()
+   call s:MakeTestMenu()
+   call s:TestHooks()
+   call s:TestWorkarounds()
+   call s:TestMoveMenu()
+endfunc
+
 call s:Test()
 

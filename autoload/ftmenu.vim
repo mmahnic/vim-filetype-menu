@@ -69,7 +69,10 @@ function! ftmenu#AddWorkaround(filetype, menunames)
    endif
 endfunc
 
-function! s:CaptureMenu(menu)
+" Captures a menu and returns a list of entries from which the menu can be
+" recreated. The entries in existingEntries will be updated and returned. If
+" the menu doesn't exist the function will return -1.
+function! ftmenu#CaptureMenu(menu, existingEntries)
    if s:debug
       echom "CaptureMenu " . a:menu
    endif
@@ -90,16 +93,13 @@ function! s:CaptureMenu(menu)
    let priors   = []
    let level = -1
 
-   let capMenus = []
+   let capMenus = a:existingEntries
    let capMenuIds = {}
-   if has_key(s:MenuCaptures, a:menu)
-      let capMenus = s:MenuCaptures[a:menu]
-      let i = 0
-      for mx in capMenus
-         let capMenuIds[mx.id] = i
-         let i = i + 1
-      endfor
-   endif
+   let i = 0
+   for mx in capMenus
+      let capMenuIds[mx.id] = i
+      let i = i + 1
+   endfor
 
    for line in lines
       let mtitle = matchstr(line, '^\s*\d\+\s.\+') | " space digits space any
@@ -153,19 +153,17 @@ function! s:CaptureMenu(menu)
       endif
    endfor
 
-   if len(capMenus) > 0
-      let s:MenuCaptures[a:menu] = capMenus
-   endif
-
-   return len(capMenus)
+   return capMenus
 endfunc
 
-" Recreate the menu 'oldmenu' as menu 'newmenu'
-function! s:CreateCapturedMenu(newmenu, oldmenu)
-   if !has_key(s:MenuCaptures, a:oldmenu) | return | endif
-   let entries = s:MenuCaptures[a:oldmenu]
-   for mx in entries
-      let cmd = '80' . mx.cmd . ' ' . a:newmenu . '.' . join(mx.menu[1:], '.') . ' ' . mx.rhs
+" Create menu items from entries under the menu menuPath.
+"
+" The first item in the menupath of every entey will be removed. If for
+" example the menu 'Tools.Spelling' is captured in entries, then menu[0] of
+" each entry is 'Tools.Spelling' which will be removed.
+function! ftmenu#CreateMenu(menuPath, entries)
+   for mx in a:entries
+      let cmd = '80' . mx.cmd . ' ' . a:menuPath . '.' . join(mx.menu[1:], '.') . ' ' . mx.rhs
       " echo cmd
       try
          silent exec cmd
@@ -175,6 +173,26 @@ function! s:CreateCapturedMenu(newmenu, oldmenu)
          endif
       endtry
    endfor
+endfunc
+
+function! s:CaptureMenu(menu)
+   if has_key(s:MenuCaptures, a:menu)
+      let capMenus = s:MenuCaptures[a:menu]
+   else
+      let capMenus = []
+   endif
+
+   let updatedMenus = ftmenu#CaptureMenu(a:menu, capMenus)
+
+   if type(updatedMenus) == type(1)
+      return updatedMenus
+   endif
+
+   if len(updatedMenus) > 0
+      let s:MenuCaptures[a:menu] = updatedMenus
+   endif
+
+   return len(updatedMenus)
 endfunc
 
 " Check if the Mode-menu has to be recreated
@@ -222,7 +240,11 @@ function! s:CreateFtMenu(filetype, menu)
             catch
             endtry
          endif
-         call s:CreateCapturedMenu(newmenu, existing)
+
+         if has_key(s:MenuCaptures, existing)
+            let entries = s:MenuCaptures[existing]
+            call ftmenu#CreateMenu(newmenu, entries)
+         endif
       endfor
    endif
 
@@ -235,6 +257,19 @@ function! s:CreateFtMenu(filetype, menu)
       catch
       endtry
    endfor
+endfunc
+
+function! ftmenu#MoveMenu(oldMenuPath, newMenuPath)
+   let capMenu = ftmenu#CaptureMenu(a:oldMenuPath, [])
+   if type(capMenu) == type(1)
+      return
+   endif
+   try 
+      exec "aunmenu " . a:oldMenuPath
+   catch
+   endtry
+
+   call ftmenu#CreateMenu(a:newMenuPath, capMenu)
 endfunc
 
 function! ftmenu#CaptureKnownMenus()
