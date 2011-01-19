@@ -8,7 +8,6 @@
 " License: Vim License ( :h license )
 " This program comes with ABSOLUTELY NO WARRANTY.
 "
-" Note: AddFtMenuHook is similar to vimscript#1313, but more advanced
 let s:debug = 0
 let s:CurrentMode = ""
 let s:CurrentMenu = ""
@@ -30,11 +29,11 @@ let s:HookFunctions = {}
 "       created in Vim submenu
 let s:MenuHooks = {}
 
-" Menus that need workarounds, because they don't use the Mode-menu interface
+" Menus that need to be copied, because they don't use the Mode-menu interface
 let s:MenuCaptures = {}
 
-" Wokrarounds defined by the user (AddWorkaround(mode, menunames))
-let s:Workarounds = {}
+" Prebuilt menus managed by the plugin (AddPrebuiltMenu(mode, menunames))
+let s:PrebuiltMenus = {}
 
 function! ftmenu#RegisterHook(name, function)
    " TODO: don't allow to overwrite a registered hook
@@ -54,7 +53,7 @@ endfunc
 
 " The plugins that don't support Mode-menus may create some top-level
 " menus. This function is used to bind top-level menus to filetypes.
-function! ftmenu#AddWorkaround(filetype, menunames)
+function! ftmenu#AddPrebuiltMenu(filetype, menunames)
    if type(a:menunames) == type('')
       let menunames = [a:menunames]
    else
@@ -62,13 +61,14 @@ function! ftmenu#AddWorkaround(filetype, menunames)
    endif
    call map(menunames, 'escape(substitute(v:val, "\\s*=>\\s*", "=>", ""), " ")')
 
-   if ! has_key(s:Workarounds, a:filetype)
-      let s:Workarounds[a:filetype] = menunames
+   if ! has_key(s:PrebuiltMenus, a:filetype)
+      let s:PrebuiltMenus[a:filetype] = menunames
    else
-      call extend(s:Workarounds[a:filetype], menunames)
+      call extend(s:PrebuiltMenus[a:filetype], menunames)
    endif
 endfunc
 
+" TODO: move CaptureMenu, CreateMenu and MoveMenu to menuutils.
 " Captures a menu and returns a list of entries from which the menu can be
 " recreated. The entries in existingEntries will be updated and returned. If
 " the menu doesn't exist the function will return -1.
@@ -223,9 +223,18 @@ endfun
 " 2. Recreates the captured menus in the new menu
 " 3. Calls registered menu-hooks
 function! s:CreateFtMenu(filetype, menu)
-   if has_key(s:Workarounds, a:filetype)
-      let wrkrnds = s:Workarounds[a:filetype]
-      for menumapdef in wrkrnds
+   if exists("g:ftmenu_move_menus") 
+      " TODO: if a menu was moved it should be removed from the list; if the
+      " menu is recreated many times during a session, it should be moved to
+      " g:ftmenu_move_'nasty'_menus by the user.
+      for mnp in g:ftmenu_move_menus
+         call ftmenu#MoveMenu(mnp[0], mnp[1])
+      endfor
+   endif
+
+   if has_key(s:PrebuiltMenus, a:filetype)
+      let prblts = s:PrebuiltMenus[a:filetype]
+      for menumapdef in prblts
          let inout = split(menumapdef, "=>")
          let existing = inout[0]
          if len(inout) > 1
@@ -273,10 +282,17 @@ function! ftmenu#MoveMenu(oldMenuPath, newMenuPath)
 endfunc
 
 function! ftmenu#CaptureKnownMenus()
+   if exists("g:ftmenu_move_menus") 
+      " TODO: if a menu was moved it should be removed from the list
+      for mnp in g:ftmenu_move_menus
+         call ftmenu#MoveMenu(mnp[0], mnp[1])
+      endfor
+   endif
+
    let tried = {}
-   for mnk in keys(s:Workarounds)
-      let wrkrnds = s:Workarounds[mnk]
-      for menumapdef in wrkrnds
+   for mnk in keys(s:PrebuiltMenus)
+      let prblts = s:PrebuiltMenus[mnk]
+      for menumapdef in prblts
          let inout = split(menumapdef, "=>")
          let existing = inout[0]
          if has_key(tried, existing) 

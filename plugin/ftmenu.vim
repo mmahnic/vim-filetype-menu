@@ -9,11 +9,11 @@
 " This program comes with ABSOLUTELY NO WARRANTY.
 
 function! s:StartupStuff()
-   if exists("g:ftmenu_mode_menus") 
-      for mnk in keys(g:ftmenu_mode_menus)
-         call ftmenu#AddWorkaround(mnk, g:ftmenu_mode_menus[mnk])
+   if exists("g:ftmenu_prebuilt_menus") 
+      for mnk in keys(g:ftmenu_prebuilt_menus)
+         call ftmenu#AddPrebuiltMenu(mnk, g:ftmenu_prebuilt_menus[mnk])
       endfor
-      unlet g:ftmenu_mode_menus
+      unlet g:ftmenu_prebuilt_menus
    endif
 
    call ftmenu#CaptureKnownMenus()

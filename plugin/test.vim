@@ -27,24 +27,28 @@ function s:TestWorkarounds()
    " Workaronds are provided by the user in vimrc. Unforutnately
    " AddFtWorkaround is not available in vimrc, so a global variable will have
    " to be used for that:
-   "    let g:ftmenu_workaround = { 
+   "    let g:ftmenu_prebuilt_menus = { 
    "         \ 'python': ['Python', 'IM-Python=>&Buffer'],
    "    ...  \ }
-   call ftmenu#AddWorkaround('python', ['Python', 'IM-Python=>&Buffer'])
-   call ftmenu#AddWorkaround('sh', ['Bash'])
-   call ftmenu#AddWorkaround('perl', ['Perl'])
-   call ftmenu#AddWorkaround('lua', ['Lua'])
+   call ftmenu#AddPrebuiltMenu('python', ['Python', 'IM-Python=>&Buffer'])
+   call ftmenu#AddPrebuiltMenu('sh', ['Bash'])
+   call ftmenu#AddPrebuiltMenu('perl', ['Perl'])
+   call ftmenu#AddPrebuiltMenu('lua', ['Lua'])
 
    " HTML wants to disable menu items when switching buffers
    "    => some code removed from HTML.vim#MenuControl()
-   call ftmenu#AddWorkaround('html', ['HTML', 'XHtml=>XHtml'])
+   call ftmenu#AddPrebuiltMenu('html', ['HTML', 'XHtml=>&XHtml'])
 
    " django-templates: encoding problem; replace <a0> with \<space> in code
-   call ftmenu#AddWorkaround('htmldjango', ['XHtml', 'HTML=>Html', 'Django templates=>&Django'])
-   call ftmenu#AddWorkaround('xhtml', ['XHtml', 'HTML=>Html'])
+   call ftmenu#AddPrebuiltMenu('htmldjango', ['XHtml', 'HTML=>&Html', 'Django templates=>&Django'])
+   call ftmenu#AddPrebuiltMenu('xhtml', ['XHtml', 'HTML=>&Html'])
 
    " 'Global' functions should not be in the mode menu, but for testing it's ok
-   call ftmenu#AddWorkaround('viki', ['Plugin.Viki'])
+   call ftmenu#AddPrebuiltMenu('viki', ['Plugin.Viki'])
+
+   let g:ftmenu_move_menus = [
+            \ ['Bash.Help', 'Help.&Bash'],
+            \ ]
 
    " Timing: gvim --startuptime out
    "
